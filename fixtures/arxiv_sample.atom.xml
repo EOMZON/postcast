@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>arXiv Query: SAMPLE (offline fixture)</title>
+  <id>urn:postcast:fixtures:arxiv</id>
+  <updated>2026-02-05T00:00:00Z</updated>
+
+  <entry>
+    <id>urn:postcast:fixtures:arxiv:1</id>
+    <updated>2026-02-05T00:00:00Z</updated>
+    <published>2026-02-05T00:00:00Z</published>
+    <title>Sample: Video-based clinical workflow assistance with multimodal models</title>
+    <summary>Offline fixture entry for pipeline testing. Mentions video, clinical workflow, and multimodal.</summary>
+    <author><name>Example Author</name></author>
+    <link rel="alternate" href="https://example.invalid/paper1" />
+  </entry>
+
+  <entry>
+    <id>urn:postcast:fixtures:arxiv:2</id>
+    <updated>2026-02-05T00:00:00Z</updated>
+    <published>2026-02-05T00:00:00Z</published>
+    <title>Sample: Audio understanding for patient monitoring in hospital rooms</title>
+    <summary>Offline fixture entry for pipeline testing. Mentions audio, patient monitoring, and healthcare.</summary>
+    <author><name>Example Author</name></author>
+    <link rel="alternate" href="https://example.invalid/paper2" />
+  </entry>
+</feed>
+

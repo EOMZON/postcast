@@ -1,0 +1,8 @@
+.DS_Store
+.env
+__pycache__/
+*.pyc
+
+# raw fetches can be large/noisy; keep processed outputs by default
+data/raw/
+

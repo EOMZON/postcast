@@ -1,0 +1,12 @@
+[meta]
+id = "ai_growth"
+title = "AI 应用增长与变现（真实案例）"
+language = "zh"
+
+# 先留空：等你确定主要信息源（Newsletter/RSS/站点）再补齐
+[[sources]]
+id = "placeholder"
+kind = "rss"
+enabled = false
+url = "https://example.com/rss"
+

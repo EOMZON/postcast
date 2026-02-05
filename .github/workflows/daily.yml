@@ -1,0 +1,39 @@
+name: Daily Digests
+
+on:
+  schedule:
+    # 00:30 UTC daily
+    - cron: "30 0 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  digests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run collectors
+        run: |
+          python scripts/run_daily.py --topic ai_papers
+
+      - name: Commit results
+        run: |
+          if git status --porcelain | grep -q .; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add data/processed topics scripts .github/workflows || true
+            git commit -m "daily: digests"
+            git push
+          else
+            echo "No changes"
+          fi
+

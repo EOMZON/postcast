@@ -1,0 +1,11 @@
+[meta]
+id = "health_frontier"
+title = "健康前沿（含 AI/非 AI）"
+language = "zh"
+
+[[sources]]
+id = "placeholder"
+kind = "rss"
+enabled = false
+url = "https://example.com/rss"
+

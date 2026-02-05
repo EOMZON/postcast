@@ -1,0 +1,31 @@
+[meta]
+id = "ai_papers"
+title = "AI 论文每日速递（应用向）"
+language = "zh"
+
+# 先用 arXiv Atom API 跑通端到端；后续可加更多 sources（RSS / GitHub / HF 等）
+[[sources]]
+id = "arxiv_app"
+kind = "arxiv"
+enabled = true
+
+# arXiv API query（OR 用大写 OR）
+# 例：cat:cs.CV OR cat:eess.IV
+query = "cat:cs.CV OR cat:cs.CL OR cat:eess.IV OR cat:eess.AS"
+sort_by = "submittedDate"
+sort_order = "descending"
+max_results = 50
+
+# 关键词过滤：先粗筛，后续可用 LLM 做二次精选
+include_keywords = [
+  "medical", "health", "clinical", "patient", "radiology", "pathology",
+  "ultrasound", "mri", "ct", "diagnosis", "screening",
+  "video", "audio", "speech", "voice", "multimodal", "vision-language"
+]
+exclude_keywords = [
+  "pre-training", "pretraining", "scaling law", "optimizer", "training recipe",
+  "distributed training", "large-scale training"
+]
+
+top_k = 8
+
