@@ -11,7 +11,7 @@ enabled = true
 
 # arXiv API query（OR 用大写 OR）
 # 例：cat:cs.CV OR cat:eess.IV
-query = "cat:cs.CV OR cat:cs.CL OR cat:eess.IV OR cat:eess.AS"
+query = "(cat:cs.CV OR cat:cs.CL OR cat:eess.IV OR cat:eess.AS) AND (all:medical OR all:clinical OR all:patient OR all:radiology OR all:pathology OR all:ultrasound OR all:mri OR all:ct OR all:diagnosis OR all:screening OR all:video OR all:audio OR all:speech OR all:voice)"
 sort_by = "submittedDate"
 sort_order = "descending"
 max_results = 50
@@ -19,8 +19,8 @@ max_results = 50
 # 关键词过滤：先粗筛，后续可用 LLM 做二次精选
 include_keywords = [
   "medical", "health", "clinical", "patient", "radiology", "pathology",
-  "ultrasound", "mri", "ct", "diagnosis", "screening",
-  "video", "audio", "speech", "voice", "multimodal", "vision-language"
+  "ultrasound", "re:\\bmri\\b", "re:\\bct\\b", "diagnosis", "screening",
+  "video", "audio", "speech", "voice"
 ]
 exclude_keywords = [
   "pre-training", "pretraining", "scaling law", "optimizer", "training recipe",
@@ -28,4 +28,3 @@ exclude_keywords = [
 ]
 
 top_k = 8
-

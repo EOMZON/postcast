@@ -31,14 +31,32 @@ def _kw_norm(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "").strip().lower())
 
 
+def _kw_hit(*, text: str, kw: str) -> bool:
+    kw = (kw or "").strip()
+    if not kw:
+        return False
+    t = text or ""
+    if kw.lower().startswith("re:"):
+        pattern = kw[3:].strip()
+        if not pattern:
+            return False
+        return re.search(pattern, t, flags=re.IGNORECASE) is not None
+
+    k = kw.lower()
+    tl = t.lower()
+    # For short ASCII tokens, require word boundary to avoid accidental substring hits
+    if re.fullmatch(r"[a-z0-9]{1,4}", k):
+        return re.search(rf"\b{re.escape(k)}\b", tl) is not None
+    return k in tl
+
+
 def _matches_keywords(*, text: str, include: list[str], exclude: list[str]) -> bool:
-    t = _kw_norm(text)
     if include:
-        ok = any(_kw_norm(k) in t for k in include if _kw_norm(k))
+        ok = any(_kw_hit(text=text, kw=k) for k in include if (k or "").strip())
         if not ok:
             return False
     if exclude:
-        bad = any(_kw_norm(k) in t for k in exclude if _kw_norm(k))
+        bad = any(_kw_hit(text=text, kw=k) for k in exclude if (k or "").strip())
         if bad:
             return False
     return True
