@@ -5,6 +5,7 @@ import argparse
 import html
 import json
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -98,9 +99,65 @@ def _h(s: str) -> str:
     return html.escape(s or "", quote=True)
 
 
+def _repo_origin_http() -> str | None:
+    git_config = Path(".git/config")
+    if not git_config.exists():
+        return None
+    text = git_config.read_text(encoding="utf-8", errors="ignore")
+    m = re.search(r'^\s*url\s*=\s*(.+?)\s*$', text, flags=re.MULTILINE)
+    if not m:
+        return None
+    url = m.group(1).strip()
+    # git@github.com:OWNER/REPO.git
+    m = re.match(r"^git@github\.com:([^/]+)/([^/]+?)(?:\.git)?$", url)
+    if m:
+        return f"https://github.com/{m.group(1)}/{m.group(2)}"
+    # https://github.com/OWNER/REPO(.git)
+    m = re.match(r"^https://github\.com/([^/]+)/([^/]+?)(?:\.git)?$", url)
+    if m:
+        return f"https://github.com/{m.group(1)}/{m.group(2)}"
+    return None
+
+
+def _board_artifacts_root() -> Path:
+    return Path("docs/board-data/processed")
+
+
+def _sync_board_artifacts(entries: list[DigestEntry], *, keep_dates: set[str]) -> None:
+    root = _board_artifacts_root()
+    root.mkdir(parents=True, exist_ok=True)
+
+    # prune old dates
+    for p in root.iterdir():
+        if not p.is_dir():
+            continue
+        if p.name not in keep_dates:
+            shutil.rmtree(p, ignore_errors=True)
+
+    # copy current artifacts
+    for e in entries:
+        dest_dir = root / e.date / e.topic_id
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        src_digest = Path(e.digest_path)
+        if src_digest.exists():
+            shutil.copyfile(src_digest, dest_dir / "digest.md")
+
+        src_shortlist = Path(e.shortlist_path)
+        if src_shortlist.exists():
+            shutil.copyfile(src_shortlist, dest_dir / "shortlist.jsonl")
+
+        # Optional but useful for debugging: all items
+        src_items = Path("data/processed") / e.date / e.topic_id / "items.jsonl"
+        if src_items.exists():
+            shutil.copyfile(src_items, dest_dir / "items.jsonl")
+
+
 def _render_digests(entries: list[DigestEntry]) -> str:
     if not entries:
         return "<div class=\"card\"><div class=\"muted\">暂无 digest 产物。</div></div>"
+
+    repo_http = _repo_origin_http()
 
     # group by topic
     by_topic: dict[str, list[DigestEntry]] = {}
@@ -119,10 +176,15 @@ def _render_digests(entries: list[DigestEntry]) -> str:
         for e in sorted(items, key=lambda x: x.date, reverse=True):
             count = len(e.items)
             open_links = []
+            local_dir = f"../board-data/processed/{_h(e.date)}/{_h(e.topic_id)}"
             if Path(e.digest_path).exists():
-                open_links.append(f"<a href=\"../{_h(e.digest_path)}\">digest.md</a>")
+                open_links.append(f"<a href=\"{local_dir}/digest.md\">digest</a>")
             if Path(e.shortlist_path).exists():
-                open_links.append(f"<a href=\"../{_h(e.shortlist_path)}\">shortlist.jsonl</a>")
+                open_links.append(f"<a href=\"{local_dir}/shortlist.jsonl\">shortlist</a>")
+            if repo_http:
+                gh_base = f"{repo_http}/blob/main"
+                if Path(e.digest_path).exists():
+                    open_links.append(f"<a href=\"{_h(gh_base)}/data/processed/{_h(e.date)}/{_h(e.topic_id)}/digest.md\" target=\"_blank\" rel=\"noreferrer\">github</a>")
             top_titles = []
             for it in e.items[:3]:
                 t = (it.get("title") or "").strip().replace("\n", " ")
@@ -204,6 +266,9 @@ def build_board(*, max_days: int) -> tuple[Path, Path]:
     entries = _collect_digests(max_days=max_days)
     issue_src = _latest_issue_sources()
 
+    keep_dates = {e.date for e in entries}
+    _sync_board_artifacts(entries, keep_dates=keep_dates)
+
     digest_html = _render_digests(entries)
     sources_html = _render_sources_block(issue_src)
 
@@ -250,8 +315,15 @@ def build_board(*, max_days: int) -> tuple[Path, Path]:
                         <div class="muted">Quick links</div>
                         <ul class="list-tight">
                           <li><a href="../report.html">方案报告（report）</a></li>
-                          <li><a href="../../data/processed/">data/processed</a>（产物目录，仅本地）</li>
-                          <li><a href="../../topics/">topics</a>（主题配置，仅本地）</li>
+                          <li><a href="../board-data/processed/">board-data/processed</a>（看板可点开的产物快照）</li>
+                          <li><a href="../../topics/">topics</a>（主题配置，仅本地/仓库根目录）</li>
+                        </ul>
+                      </div>
+                      <div class="callout warning" style="margin-top:12px">
+                        <div class="title">为什么你在 GitHub 网页里点不开？</div>
+                        <ul>
+                          <li>GitHub 直接预览 HTML 会禁用脚本：看板依赖 <code>zon-report-kit</code> 的 JS 渲染，因此会空白/不可交互。</li>
+                          <li>正确打开方式：本地用浏览器打开 <code>docs/board.html</code>，或用 GitHub Pages/Vercel 托管后访问。</li>
                         </ul>
                       </div>
                     """
@@ -324,7 +396,16 @@ def build_board(*, max_days: int) -> tuple[Path, Path]:
     <link rel="stylesheet" href="https://zon-report-kit.zondev.top/zon-report.css" />
   </head>
   <body>
-    <div data-zon-report data-var="zonBoardData"></div>
+    <div data-zon-report data-var="zonBoardData">
+      <main style="max-width:860px;margin:36px auto;padding:0 18px;font:16px/1.8 ui-sans-serif,system-ui,-apple-system,'PingFang SC','Microsoft YaHei';color:#0a0a0a">
+        <h1 style="font-size:22px;letter-spacing:.02em;margin:0 0 10px">postcast · Daily Board</h1>
+        <p style="margin:0 0 18px;color:#666">如果你看到这段文字，说明脚本没有运行（例如在 GitHub 网页预览 HTML）。请用浏览器本地打开 <code>docs/board.html</code>，或开启 GitHub Pages。</p>
+        <ul>
+          <li><a href="../board-data/processed/">打开 board-data/processed（快照）</a></li>
+          <li><a href="../report.html">打开方案报告（report）</a></li>
+        </ul>
+      </main>
+    </div>
     <script src="{_h(data_path.name)}"></script>
     <script src="https://zon-report-kit.zondev.top/zon-report.js"></script>
   </body>
