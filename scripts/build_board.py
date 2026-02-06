@@ -153,6 +153,66 @@ def _sync_board_artifacts(entries: list[DigestEntry], *, keep_dates: set[str]) -
             shutil.copyfile(src_items, dest_dir / "items.jsonl")
 
 
+def _write_board_data_indexes(*, keep_dates: set[str]) -> None:
+    base = Path("docs/board-data")
+    processed = base / "processed"
+    processed.mkdir(parents=True, exist_ok=True)
+
+    dates = sorted(keep_dates, reverse=True)
+    blocks: list[str] = []
+    for d in dates:
+        ddir = processed / d
+        if not ddir.exists():
+            continue
+        topics = sorted([p for p in ddir.iterdir() if p.is_dir()], key=lambda p: p.name)
+        topic_lines: list[str] = []
+        for t in topics:
+            digest = t / "digest.md"
+            shortlist = t / "shortlist.jsonl"
+            items = t / "items.jsonl"
+            links: list[str] = []
+            if digest.exists():
+                links.append(f"<a href=\"{_h(d)}/{_h(t.name)}/digest.md\">digest</a>")
+            if shortlist.exists():
+                links.append(f"<a href=\"{_h(d)}/{_h(t.name)}/shortlist.jsonl\">shortlist</a>")
+            if items.exists():
+                links.append(f"<a href=\"{_h(d)}/{_h(t.name)}/items.jsonl\">items</a>")
+            if links:
+                topic_lines.append(f"<li><code>{_h(t.name)}</code> — " + " · ".join(links) + "</li>")
+
+        blocks.append(
+            "<details open>"
+            f"<summary><b>{_h(d)}</b> <span class=\"muted\">({len(topic_lines)} topics)</span></summary>"
+            + ("<ul>" + "".join(topic_lines) + "</ul>" if topic_lines else "<div class=\"muted\">(empty)</div>")
+            + "</details>"
+        )
+
+    processed_index = processed / "index.html"
+    processed_index.write_text(
+        "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"/>"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/>"
+        "<title>board-data · processed</title>"
+        "<link rel=\"stylesheet\" href=\"https://zon-report-kit.zondev.top/zon-report.css\" />"
+        "</head><body>"
+        "<main style=\"max-width:860px;margin:36px auto;padding:0 18px\">"
+        "<h1>board-data · processed</h1>"
+        "<p class=\"muted\">这些文件是看板可点开的产物快照（便于 GitHub Pages / 本地打开）。</p>"
+        + "".join(blocks)
+        + "</main></body></html>\n",
+        encoding="utf-8",
+    )
+
+    (base / "index.html").write_text(
+        "<!doctype html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\"/>"
+        "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/>"
+        "<meta http-equiv=\"refresh\" content=\"0; url=processed/index.html\" />"
+        "<title>board-data</title></head><body>"
+        "<p>Redirecting… <a href=\"processed/index.html\">Open processed</a></p>"
+        "</body></html>\n",
+        encoding="utf-8",
+    )
+
+
 def _render_digests(entries: list[DigestEntry]) -> str:
     if not entries:
         return "<div class=\"card\"><div class=\"muted\">暂无 digest 产物。</div></div>"
@@ -268,6 +328,7 @@ def build_board(*, max_days: int) -> tuple[Path, Path]:
 
     keep_dates = {e.date for e in entries}
     _sync_board_artifacts(entries, keep_dates=keep_dates)
+    _write_board_data_indexes(keep_dates=keep_dates)
 
     digest_html = _render_digests(entries)
     sources_html = _render_sources_block(issue_src)
@@ -315,7 +376,7 @@ def build_board(*, max_days: int) -> tuple[Path, Path]:
                         <div class="muted">Quick links</div>
                         <ul class="list-tight">
                           <li><a href="../report.html">方案报告（report）</a></li>
-                          <li><a href="../board-data/processed/">board-data/processed</a>（看板可点开的产物快照）</li>
+                          <li><a href="../board-data/processed/index.html">board-data/processed</a>（看板可点开的产物快照）</li>
                           <li><a href="../../topics/">topics</a>（主题配置，仅本地/仓库根目录）</li>
                         </ul>
                       </div>
@@ -401,7 +462,7 @@ def build_board(*, max_days: int) -> tuple[Path, Path]:
         <h1 style="font-size:22px;letter-spacing:.02em;margin:0 0 10px">postcast · Daily Board</h1>
         <p style="margin:0 0 18px;color:#666">如果你看到这段文字，说明脚本没有运行（例如在 GitHub 网页预览 HTML）。请用浏览器本地打开 <code>docs/board.html</code>，或开启 GitHub Pages。</p>
         <ul>
-          <li><a href="../board-data/processed/">打开 board-data/processed（快照）</a></li>
+          <li><a href="../board-data/processed/index.html">打开 board-data/processed（快照）</a></li>
           <li><a href="../report.html">打开方案报告（report）</a></li>
         </ul>
       </main>
