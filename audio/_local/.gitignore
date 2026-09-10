@@ -1,0 +1,3 @@
+# Keep this folder structure in Git, but ignore all local audio assets.
+*
+!.gitignore

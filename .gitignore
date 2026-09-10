@@ -6,3 +6,6 @@ __pycache__/
 # raw fetches can be large/noisy; keep processed outputs by default
 data/raw/
 
+# local audio assets (do not commit)
+audio/_local/**
+!audio/_local/.gitignore
